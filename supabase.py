@@ -22,7 +22,8 @@ conn = psycopg2.connect(
     port=DB_PORT,
     database=DB_DATABASE,
     user=DB_USERNAME,
-    password=DB_PASSWORD
+    password=DB_PASSWORD,
+    sslmode="DISABLE"
 )
 
 # Create a cursor object to execute queries
