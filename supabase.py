@@ -1,74 +1,62 @@
+import os
 import logging
-from telegram.ext import Updater, CommandHandler, MessageHandler
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 import psycopg2
 from flask import Flask, request
+
+# Load environment variables from .env file
+TOKEN = os.getenv('TOKEN')
+DB_HOST = os.getenv('DB_HOST')
+DB_PORT = int(os.getenv('DB_PORT'))
+DB_USERNAME = os.getenv('DB_USERNAME')
+DB_PASSWORD = os.getenv('DB_PASSWORD')
+DB_DATABASE = os.getenv('DB_DATABASE')
+WEBHOOK_URL = os.getenv('WEBHOOK_URL')
 
 # Enable logging
 logging.basicConfig(level=logging.INFO)
 
-# Telegram Bot Token
-TOKEN = '7299082317:AAFIOD97Ny8ng-sXgOh7BBxcgKB6tSK4ZPM'
-
-# Supabase credentials
-SUPABASE_URL = 'https://hlakdepwuqvdrzeodqsn.supabase.co'
-SUPABASE_DB = 'postgres'
-SUPABASE_USER = 'postgres.hlakdepwuqvdrzeodqsn'
-SUPABASE_PASSWORD = 'farhan@786786123'
-
-# Connect to Supabase
+# Establish a connection to TiDB Cloud
 conn = psycopg2.connect(
-    host=SUPABASE_URL,
-    database=SUPABASE_DB,
-    user=SUPABASE_USER,
-    password=SUPABASE_PASSWORD
+    host=DB_HOST,
+    port=DB_PORT,
+    database=DB_DATABASE,
+    user=DB_USERNAME,
+    password=DB_PASSWORD
 )
-cursor = conn.cursor()
 
-# Create a table to store user data if it doesn't exist
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        telegram_id INTEGER,
-        username TEXT
-    )
-''')
-conn.commit()
+# Create a cursor object to execute queries
+cur = conn.cursor()
 
-# Define a function to check if a user exists in the database
-def user_exists(telegram_id):
-    cursor.execute('''
-        SELECT 1 FROM users
-        WHERE telegram_id = %s
-    ''', (telegram_id,))
-    return cursor.fetchone() is not None
-
-# Define a function to handle the /start command
-def start(update, context):
-    telegram_id = update.effective_user.id
-    if user_exists(telegram_id):
-        context.bot.send_message(chat_id=update.effective_chat.id, text='Hello, sir!')
-    else:
-        context.bot.send_message(chat_id=update.effective_chat.id, text='Please Sign Up')
-
-# Create a Flask app to handle Webhook requests
 app = Flask(__name__)
 
 @app.route('/' + TOKEN, methods=['POST'])
 def webhook():
     update = Updater(TOKEN, use_context=True).update_ejson(request.get_json())
-    dp = updater.dispatcher
+    dp = update.dispatcher
     dp.process_update(update)
     return 'ok'
 
-# Set up the Webhook
-updater = Updater(TOKEN, use_context=True)
-updater.start_webhook(listen='0.0.0.0', port=8443, url_path=TOKEN)
-updater.bot.set_webhook('https://supabas.onrender.com/' + TOKEN)
+def start(update, context):
+    cur.execute("SELECT * FROM users WHERE telegram_id = %s", (update.effective_user.id,))
+    if cur.fetchone() is None:
+        cur.execute("INSERT INTO users (telegram_id, username) VALUES (%s, %s)",
+                    (update.effective_user.id, update.effective_user.username))
+        conn.commit()
+    update.message.reply_text("Hello! I'm your Telegram bot.")
 
-# Add a handler for the /start command
-dp = updater.dispatcher
-dp.add_handler(CommandHandler('start', start))
+def echo(update, context):
+    cur.execute("SELECT * FROM users WHERE telegram_id = %s", (update.effective_user.id,))
+    user = cur.fetchone()
+    if user:
+        update.message.reply_text(f"Hello, {user[1]}!")
 
-# Run the Flask app
+def main():
+    dp = Updater(TOKEN, use_context=True).dispatcher
+    dp.add_handler(CommandHandler("start", start))
+    dp.add_handler(MessageHandler(Filters.text, echo))
+
+    app.run(webhook_url=WEBHOOK_URL)
+
 if __name__ == '__main__':
-    app.run()
+    main()
