@@ -63,7 +63,7 @@ def webhook():
 # Set up the Webhook
 updater = Updater(TOKEN, use_context=True)
 updater.start_webhook(listen='0.0.0.0', port=8443, url_path=TOKEN)
-updater.bot.set_webhook('https://your-heroku-app.herokuapp.com/' + TOKEN)
+updater.bot.set_webhook('https://supabas.onrender.com/' + TOKEN)
 
 # Add a handler for the /start command
 dp = updater.dispatcher
