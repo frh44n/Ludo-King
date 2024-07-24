@@ -7,13 +7,13 @@ from flask import Flask, request
 logging.basicConfig(level=logging.INFO)
 
 # Telegram Bot Token
-TOKEN = 'YOUR_BOT_TOKEN'
+TOKEN = '7299082317:AAFIOD97Ny8ng-sXgOh7BBxcgKB6tSK4ZPM'
 
 # Supabase credentials
-SUPABASE_URL = 'https://your-supabase-instance.supabase.io'
-SUPABASE_DB = 'your-supabase-db'
-SUPABASE_USER = 'your-supabase-username'
-SUPABASE_PASSWORD = 'your-supabase-password'
+SUPABASE_URL = 'postgresql://postgres.hlakdepwuqvdrzeodqsn:[farhan@786786123]@aws-0-ap-south-1.pooler.supabase.com:6543/postgres'
+SUPABASE_DB = 'postgres'
+SUPABASE_USER = 'postgres.hlakdepwuqvdrzeodqsn'
+SUPABASE_PASSWORD = 'farhan@786786123'
 
 # Connect to Supabase
 conn = psycopg2.connect(
