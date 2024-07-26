@@ -20,7 +20,7 @@ conn.commit()
 
 # Your bot token and group chat ID
 BOT_TOKEN = '7256179302:AAEDk58-AphBlxcey5DYgFGMyh2yuNr_17U'
-GROUP_CHAT_ID = 'YOUR_GROUP_CHAT_ID'
+GROUP_CHAT_ID = '1002156476121'
 
 # Initialize the bot
 bot = Bot(token=BOT_TOKEN)
