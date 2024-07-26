@@ -42,7 +42,7 @@ def start(update: Update, context: CallbackContext) -> None:
 # Function to set webhook
 @app.route('/set_webhook', methods=['GET', 'POST'])
 def set_webhook():
-    webhook_url = f"https://your_server.com/{BOT_TOKEN}"
+    webhook_url = f"https://ludo-king.onrender.com/{BOT_TOKEN}"
     bot.set_webhook(url=webhook_url)
     return "Webhook set successfully"
 
