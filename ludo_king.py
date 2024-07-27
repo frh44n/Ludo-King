@@ -229,7 +229,7 @@ def confirm_action(update: Update, context: CallbackContext):
 
 def main():
     create_table()
-    
+
     global dispatcher
     dispatcher = Dispatcher(bot, None, use_context=True)
 
@@ -241,6 +241,9 @@ def main():
     dispatcher.add_handler(CallbackQueryHandler(handle_entry_selection, pattern='entry_'))
     dispatcher.add_handler(CallbackQueryHandler(confirm_action, pattern='confirm_entry_|cancel'))
     dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
+
+    # Register new handlers for the additional functionality
+    test.register_new_handlers(dispatcher)
 
     bot.set_webhook(WEBHOOK_URL)
     logger.info(f"Webhook set to {WEBHOOK_URL}")
