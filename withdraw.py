@@ -10,7 +10,7 @@ def withdraw_command(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
     context.user_data['withdraw_state'] = 'waiting_for_amount'
     context.user_data['withdraw_user_id'] = user_id
-    update.message.reply_text("Enter Amount:")
+    update.message.reply_text("Enter amount:")
 
 def handle_withdraw_amount(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
@@ -18,7 +18,7 @@ def handle_withdraw_amount(update: Update, context: CallbackContext):
         amount = update.message.text
         context.user_data['withdraw_amount'] = amount
         context.user_data['withdraw_state'] = 'waiting_for_upi'
-        update.message.reply_text("Enter your UPI ID:")
+        update.message.reply_text("Enter your UPI to receive money:")
 
 def handle_withdraw_upi(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
@@ -27,10 +27,12 @@ def handle_withdraw_upi(update: Update, context: CallbackContext):
         amount = context.user_data['withdraw_amount']
         context.bot.send_message(
             chat_id=GROUP_CHAT_ID,
-            text=f"Withdraw request\nuser_id: {user_id}\namount: {amount}\nUPI: {upi_id}"
+            text=f"Withdraw Request\nuser_id: {user_id}\nAmount: {amount}\nUPI: {upi_id}"
         )
         update.message.reply_text("Your withdraw request has been forwarded.")
         context.user_data['withdraw_state'] = None
+        context.user_data['withdraw_user_id'] = None
+        context.user_data['withdraw_amount'] = None
 
 def register_withdraw_handlers(dispatcher):
     dispatcher.add_handler(CommandHandler('Withdraw', withdraw_command))
