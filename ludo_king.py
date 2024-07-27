@@ -23,70 +23,96 @@ bot = Bot(TOKEN)
 
 app = Flask(__name__)
 
-@app.route('/webhook', methods=['POST'])
+@app.route(f'/{TOKEN}', methods=['POST'])
 def webhook():
-    update = Update.de_json(request.get_json(), bot)
-    dispatcher.process_update(update)
-    return 'ok'
+    try:
+        update_json = request.get_json(force=True)
+        logger.info(f"Webhook received: {update_json}")
+        update = Update.de_json(update_json, bot)
+        dispatcher.process_update(update)
+        return 'ok'
+    except Exception as e:
+        logger.error(f"Error in webhook: {e}")
+        return 'error'
 
 def start(update, context):
-    user_id = update.message.from_user.id
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM users WHERE user_id = %s", (user_id,))
-    user = cur.fetchone()
-    
-    if not user:
-        cur.execute("INSERT INTO users (user_id) VALUES (%s)", (user_id,))
-        conn.commit()
-        update.message.reply_text("Welcome! Your account has been created.")
-    else:
-        update.message.reply_text("Welcome back!")
-    
-    cur.close()
-    conn.close()
+    try:
+        user_id = update.message.from_user.id
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM users WHERE user_id = %s", (user_id,))
+        user = cur.fetchone()
+        
+        if not user:
+            cur.execute("INSERT INTO users (user_id) VALUES (%s)", (user_id,))
+            conn.commit()
+            update.message.reply_text("Welcome! Your account has been created.")
+        else:
+            update.message.reply_text("Welcome back!")
+        
+        cur.close()
+        conn.close()
+    except Exception as e:
+        logger.error(f"Error in start command: {e}")
+        update.message.reply_text("An error occurred while processing your request.")
 
 def account_balance(update, context):
-    user_id = update.message.from_user.id
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT available_balance, deposit_balance, withdrawal_balance FROM users WHERE user_id = %s", (user_id,))
-    user = cur.fetchone()
-    
-    if user:
-        available_balance, deposit_balance, withdrawal_balance = user
-        update.message.reply_text(
-            f"Available Balance: {available_balance}\n"
-            f"Deposit Balance: {deposit_balance}\n"
-            f"Withdrawal Balance: {withdrawal_balance}"
-        )
-    else:
-        update.message.reply_text("You don't have an account yet. Send /start to create one.")
-    
-    cur.close()
-    conn.close()
+    try:
+        user_id = update.message.from_user.id
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT available_balance, deposit_balance, withdrawal_balance FROM users WHERE user_id = %s", (user_id,))
+        user = cur.fetchone()
+        
+        if user:
+            available_balance, deposit_balance, withdrawal_balance = user
+            update.message.reply_text(
+                f"Available Balance: {available_balance}\n"
+                f"Deposit Balance: {deposit_balance}\n"
+                f"Withdrawal Balance: {withdrawal_balance}"
+            )
+        else:
+            update.message.reply_text("You don't have an account yet. Send /start to create one.")
+        
+        cur.close()
+        conn.close()
+    except Exception as e:
+        logger.error(f"Error in account_balance command: {e}")
+        update.message.reply_text("An error occurred while processing your request.")
 
 def add_balance(update, context):
-    update.message.reply_text(
-        "Pay minimum ₹10 on UPI [9931071170@fam].",
-        reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("PAID", callback_data='paid')]
-        ])
-    )
+    try:
+        update.message.reply_text(
+            "Pay minimum ₹10 on UPI [9931071170@fam].",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("PAID", callback_data='paid')]
+            ])
+        )
+    except Exception as e:
+        logger.error(f"Error in add_balance command: {e}")
+        update.message.reply_text("An error occurred while processing your request.")
 
 def handle_paid(update, context):
-    query = update.callback_query
-    query.answer()
-    query.message.reply_text("Enter 12-digit UTR.")
-    context.user_data['waiting_for_utr'] = True
+    try:
+        query = update.callback_query
+        query.answer()
+        query.message.reply_text("Enter 12-digit UTR.")
+        context.user_data['waiting_for_utr'] = True
+    except Exception as e:
+        logger.error(f"Error in handle_paid callback: {e}")
+        query.message.reply_text("An error occurred while processing your request.")
 
 def handle_message(update, context):
-    if context.user_data.get('waiting_for_utr'):
-        user_id = update.message.from_user.id
-        utr = update.message.text
-        context.bot.send_message(chat_id=GROUP_CHAT_ID, text=f"user_id: {user_id}, UTR: {utr}")
-        update.message.reply_text("Your UTR has been forwarded.")
-        context.user_data['waiting_for_utr'] = False
+    try:
+        if context.user_data.get('waiting_for_utr'):
+            user_id = update.message.from_user.id
+            utr = update.message.text
+            context.bot.send_message(chat_id=GROUP_CHAT_ID, text=f"user_id: {user_id}, UTR: {utr}")
+            update.message.reply_text("Your UTR has been forwarded.")
+            context.user_data['waiting_for_utr'] = False
+    except Exception as e:
+        logger.error(f"Error in handle_message: {e}")
+        update.message.reply_text("An error occurred while processing your request.")
 
 def main():
     global dispatcher
@@ -99,6 +125,7 @@ def main():
     dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
 
     bot.set_webhook(WEBHOOK_URL)
+    logger.info(f"Webhook set to {WEBHOOK_URL}")
 
 if __name__ == '__main__':
     main()
