@@ -14,6 +14,21 @@ DATABASE_URL = "postgres://default:gaFjrs9b4oLK@ep-ancient-smoke-a1pliqaw.ap-sou
 def get_db_connection():
     return psycopg2.connect(DATABASE_URL, sslmode='require')
 
+def create_table():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            user_id BIGINT PRIMARY KEY,
+            available_balance NUMERIC DEFAULT 0,
+            deposit_balance NUMERIC DEFAULT 0,
+            withdrawal_balance NUMERIC DEFAULT 0
+        )
+    """)
+    conn.commit()
+    cur.close()
+    conn.close()
+
 # Bot token and webhook URL
 TOKEN = '7256179302:AAEKIqy4U--JL6pypx47YsNhuTVRrNO2j4k'
 WEBHOOK_URL = 'https://ludo-king.onrender.com/7256179302:AAEKIqy4U--JL6pypx47YsNhuTVRrNO2j4k'
@@ -115,6 +130,8 @@ def handle_message(update, context):
         update.message.reply_text("An error occurred while processing your request.")
 
 def main():
+    create_table()
+    
     global dispatcher
     dispatcher = Dispatcher(bot, None, use_context=True)
 
