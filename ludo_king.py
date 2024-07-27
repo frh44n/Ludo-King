@@ -123,12 +123,40 @@ def handle_paid(update: Update, context: CallbackContext):
 
 def handle_message(update: Update, context: CallbackContext):
     try:
+        user_id = update.message.from_user.id
+
         if context.user_data.get('waiting_for_utr'):
-            user_id = update.message.from_user.id
             utr = update.message.text
             context.bot.send_message(chat_id=GROUP_CHAT_ID, text=f"user_id: {user_id}, UTR: {utr}")
             update.message.reply_text("Your UTR has been forwarded.")
             context.user_data['waiting_for_utr'] = False
+
+        elif context.user_data.get('waiting_for_ludo_id'):
+            ludo_id = update.message.text
+            entry_amount = context.user_data.get('entry_amount')
+
+            # Forward the message to the GROUP_CHAT_ID
+            context.bot.send_message(
+                chat_id=GROUP_CHAT_ID,
+                text=f"Match Start 👑\nchat_id: {user_id}\nEntry amount: ₹{entry_amount}\nLudo_id: {ludo_id}"
+            )
+
+            # Deduct the entry amount from the user's balance
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute("UPDATE users SET available_balance = available_balance - %s WHERE user_id = %s", (entry_amount, user_id))
+            conn.commit()
+            cur.close()
+            conn.close()
+
+            # Notify the user
+            update.message.reply_text(f"Match started! ₹{entry_amount} has been deducted from your balance.")
+            context.user_data['waiting_for_ludo_id'] = False
+
+        else:
+            # Handle other messages if necessary
+            pass
+
     except Exception as e:
         logger.error(f"Error in handle_message: {e}")
         update.message.reply_text("An error occurred while processing your request.")
@@ -170,11 +198,11 @@ def handle_entry_selection(update: Update, context: CallbackContext):
                 query.edit_message_text(text="Insufficient Balance. Please /Add_Balance.")
             else:
                 keyboard = [
-                    [InlineKeyboardButton("Play Match", callback_data=f'play_{data}')],
+                    [InlineKeyboardButton("Confirm Entry", callback_data=f'confirm_entry_{entry_amount}')],
                     [InlineKeyboardButton("Cancel ❌", callback_data='cancel')]
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
-                query.edit_message_text(text="Confirm your choice:", reply_markup=reply_markup)
+                query.edit_message_text(text=f"You have selected an entry fee of ₹{entry_amount}. Confirm your choice:", reply_markup=reply_markup)
 
         cur.close()
         conn.close()
@@ -189,15 +217,11 @@ def confirm_action(update: Update, context: CallbackContext):
         user_id = query.from_user.id
         data = query.data
 
-        if data.startswith('play_'):
-            entry_amount = 10 if data == 'play_entry_10' else 20
-            conn = get_db_connection()
-            cur = conn.cursor()
-            cur.execute("UPDATE users SET available_balance = available_balance - %s WHERE user_id = %s", (entry_amount, user_id))
-            conn.commit()
-            cur.close()
-            conn.close()
-            query.edit_message_text(f"Match started! ₹{entry_amount} has been deducted from your balance.")
+        if data.startswith('confirm_entry_'):
+            entry_amount = int(data.split('_')[-1])
+            context.user_data['entry_amount'] = entry_amount
+            query.edit_message_text("Enter your Ludo ID:")
+            context.user_data['waiting_for_ludo_id'] = True
         elif data == 'cancel':
             query.edit_message_text("Action cancelled.")
     except Exception as e:
@@ -216,7 +240,7 @@ def main():
     dispatcher.add_handler(CommandHandler("Play", play))
     dispatcher.add_handler(CallbackQueryHandler(handle_paid, pattern='paid'))
     dispatcher.add_handler(CallbackQueryHandler(handle_entry_selection, pattern='entry_'))
-    dispatcher.add_handler(CallbackQueryHandler(confirm_action, pattern='play_|cancel'))
+    dispatcher.add_handler(CallbackQueryHandler(confirm_action, pattern='confirm_entry_|cancel'))
     dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
 
     bot.set_webhook(WEBHOOK_URL)
