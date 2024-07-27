@@ -1,8 +1,7 @@
-import sqlite3
+import psycopg2
 import logging
 from telegram import Update, Bot
 from telegram.ext import Updater, CommandHandler, CallbackContext
-from telegram.ext import Dispatcher, MessageHandler, Filters, CallbackContext
 from flask import Flask, request
 
 # Set up logging
@@ -12,10 +11,11 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 # Initialize Flask app
 app = Flask(__name__)
 
-# Database setup
-conn = sqlite3.connect('users.db', check_same_thread=False)
+# Database setup (replace with your PostgreSQL database credentials)
+DATABASE_URL = 'postgresql://frh44n:ev0Hhs09Gc7hSGm5y2CfKPXKZrjN1ewf@dpg-cqi4anks1f4s73cgo9r0-a/ludoking'
+conn = psycopg2.connect(DATABASE_URL)
 c = conn.cursor()
-c.execute('''CREATE TABLE IF NOT EXISTS users (chat_id INTEGER PRIMARY KEY)''')
+c.execute('''CREATE TABLE IF NOT EXISTS users (chat_id BIGINT PRIMARY KEY)''')
 conn.commit()
 
 # Your bot token and group chat ID
@@ -28,11 +28,11 @@ bot = Bot(token=BOT_TOKEN)
 # Function to start the bot
 def start(update: Update, context: CallbackContext) -> None:
     chat_id = update.message.chat_id
-    c.execute("SELECT * FROM users WHERE chat_id = ?", (chat_id,))
+    c.execute("SELECT * FROM users WHERE chat_id = %s", (chat_id,))
     user = c.fetchone()
     
     if user is None:
-        c.execute("INSERT INTO users (chat_id) VALUES (?)", (chat_id,))
+        c.execute("INSERT INTO users (chat_id) VALUES (%s)", (chat_id,))
         conn.commit()
         update.message.reply_text("Welcome to Ludo King Tournament")
         bot.send_message(chat_id=GROUP_CHAT_ID, text=f"New user registered with chat_id: {chat_id}")
