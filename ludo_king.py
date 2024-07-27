@@ -4,6 +4,10 @@ import logging
 from telegram import Update, Bot
 from telegram.ext import Updater, CommandHandler, CallbackContext
 from flask import Flask
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Set up logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -41,7 +45,7 @@ def start(update: Update, context: CallbackContext) -> None:
         update.message.reply_text("Welcome! Start Playing Matches.")
 
 # Initialize the dispatcher
-updater = Updater(token=BOT_TOKEN, use_context=True)
+updater = Updater(bot=bot, use_context=True)
 dispatcher = updater.dispatcher
 
 # Add command handler to dispatcher
@@ -55,3 +59,4 @@ def run_bot():
 # Vercel requires an `app` object to be exposed
 if __name__ == "__main__":
     run_bot()
+  
