@@ -80,11 +80,16 @@ def account_balance(update: Update, context: CallbackContext):
         user_id = update.message.from_user.id
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("SELECT available_balance, deposit_balance, withdrawal_balance FROM users WHERE user_id = %s", (user_id,))
+        cur.execute("""
+            SELECT deposit_balance, withdrawal_balance
+            FROM users
+            WHERE user_id = %s
+        """, (user_id,))
         user = cur.fetchone()
         
         if user:
-            available_balance, deposit_balance, withdrawal_balance = user
+            deposit_balance, withdrawal_balance = user
+            available_balance = deposit_balance + withdrawal_balance
             update.message.reply_text(
                 f"Available Balance: {available_balance}\n"
                 f"Deposit Balance: {deposit_balance}\n"
