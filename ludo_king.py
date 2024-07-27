@@ -10,13 +10,15 @@ import logging
 app = Flask(__name__)
 
 # Initialize Telegram bot
-from telegram import Bot
-TOKEN = os.getenv('BOT_TOKEN')
+TOKEN = '7256179302:AAEKIqy4U--JL6pypx47YsNhuTVRrNO2j4k'
 bot = Bot(token=TOKEN)
 
 # Replace with your PostgreSQL connection details
-DATABASE_URL = os.getenv('DATABASE_URL')
+DATABASE_URL = 'postgres://default:gaFjrs9b4oLK@ep-ancient-smoke-a1pliqaw.ap-southeast-1.aws.neon.tech:5432/verceldb?sslmode=require'
 ADMIN_ID = 6826870863  # Replace with the admin's Telegram user ID
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
 
 def get_db_connection():
     conn = psycopg2.connect(DATABASE_URL)
@@ -39,6 +41,7 @@ def total_user(update: Update, context: CallbackContext):
         else:
             context.bot.send_message(chat_id=update.effective_chat.id, text="No users found.")
     except Exception as e:
+        logging.error(f"Error processing /Total_user command: {e}")
         context.bot.send_message(chat_id=update.effective_chat.id, text=f"An error occurred: {e}")
     finally:
         cursor.close()
@@ -47,24 +50,24 @@ def total_user(update: Update, context: CallbackContext):
 @app.route('/webhook', methods=['POST'])
 def webhook():
     update = request.get_json()
-    if 'message' in update:
+    if 'message' in update and update['message']['text'].startswith('/'):
         dispatcher.process_update(Update.de_json(update, bot))
     return 'ok'
 
 def set_webhook():
-    webhook_url = os.getenv('WEBHOOK_URL')  # This should be your public URL
+    webhook_url = 'https://ludo-king.onrender.com/7256179302:AAEKIqy4U--JL6pypx47YsNhuTVRrNO2j4k'  # This should be your public URL
     bot.set_webhook(url=webhook_url + '/webhook')
 
 def main():
     global dispatcher
-    dispatcher = Dispatcher(bot, None, workers=0)
+    dispatcher = Dispatcher(bot, None)
     dispatcher.add_handler(CommandHandler('Total_user', total_user))
 
     # Set webhook URL
     set_webhook()
 
     # Run the Flask app
-    app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)))
+    app.run(host='0.0.0.0', port=5000)
 
 if __name__ == '__main__':
     main()
