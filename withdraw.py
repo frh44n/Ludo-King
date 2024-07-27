@@ -1,7 +1,7 @@
 from telegram import Update
 from telegram.ext import CommandHandler, MessageHandler, Filters, CallbackContext
 import logging
-from main_bot import get_db_connection
+from ludo_king import get_db_connection
 
 def withdraw_command(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
