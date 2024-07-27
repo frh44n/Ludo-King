@@ -12,7 +12,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 app = Flask(__name__)
 
 # Database setup (replace with your PostgreSQL database credentials)
-DATABASE_URL = 'postgresql://frh44n:ev0Hhs09Gc7hSGm5y2CfKPXKZrjN1ewf@dpg-cqi4anks1f4s73cgo9r0-a/ludoking'
+DATABASE_URL = 'postgresql://frh44n:ev0Hhs09Gc7hSGm5y2CfKPXKZrjN1ewf@dpg-cqi4anks1f4s73cgo9r0-a.oregon-postgres.render.com/ludoking'
 conn = psycopg2.connect(DATABASE_URL)
 c = conn.cursor()
 c.execute('''CREATE TABLE IF NOT EXISTS users (chat_id BIGINT PRIMARY KEY)''')
