@@ -1,3 +1,4 @@
+import os
 import psycopg2
 import logging
 from telegram import Update, Bot
@@ -11,16 +12,16 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 # Initialize Flask app
 app = Flask(__name__)
 
-# Database setup (replace with your PostgreSQL database credentials)
-DATABASE_URL = 'postgresql://frh44n:ev0Hhs09Gc7hSGm5y2CfKPXKZrjN1ewf@dpg-cqi4anks1f4s73cgo9r0-a.oregon-postgres.render.com/ludoking'
+# Database setup using environment variables
+DATABASE_URL = os.getenv('DATABASE_URL')
 conn = psycopg2.connect(DATABASE_URL)
 c = conn.cursor()
 c.execute('''CREATE TABLE IF NOT EXISTS users (chat_id BIGINT PRIMARY KEY)''')
 conn.commit()
 
-# Your bot token and group chat ID
-BOT_TOKEN = '7256179302:AAEDk58-AphBlxcey5DYgFGMyh2yuNr_17U'
-GROUP_CHAT_ID = '1002156476121'
+# Your bot token and group chat ID from environment variables
+BOT_TOKEN = os.getenv('BOT_TOKEN')
+GROUP_CHAT_ID = os.getenv('GROUP_CHAT_ID')
 
 # Initialize the bot
 bot = Bot(token=BOT_TOKEN)
@@ -42,7 +43,7 @@ def start(update: Update, context: CallbackContext) -> None:
 # Function to set webhook
 @app.route('/set_webhook', methods=['GET', 'POST'])
 def set_webhook():
-    webhook_url = f"https://{Vercel_Deployment_URL}/{BOT_TOKEN}"
+    webhook_url = f"https://{os.getenv('VERCEL_URL')}/{BOT_TOKEN}"
     bot.set_webhook(url=webhook_url)
     return "Webhook set successfully"
 
@@ -62,4 +63,4 @@ dispatcher.add_handler(CommandHandler("start", start))
 
 # Vercel requires an `app` object to be exposed
 if __name__ == "__main__":
-    app.run()
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
