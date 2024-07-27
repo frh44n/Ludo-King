@@ -2,7 +2,7 @@ import os
 import psycopg2
 import logging
 from telegram import Update, Bot, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Updater, CommandHandler, CallbackContext, MessageHandler, Filters, CallbackQueryHandler
+from telegram.ext import Dispatcher, CommandHandler, CallbackContext, MessageHandler, Filters, CallbackQueryHandler
 from flask import Flask, request
 from dotenv import load_dotenv
 
@@ -118,7 +118,6 @@ def button(update: Update, context: CallbackContext) -> None:
         context.user_data['awaiting_utr'] = True
     elif query.data == 'play_10':
         if user and user[0] + user[1] >= 10:
-            # Logic for playing a match with ₹10 entry
             query.edit_message_text(text="You have joined the match with ₹10 entry fee.")
             c.execute("UPDATE users SET deposit_funds = deposit_funds - 10 WHERE chat_id = %s", (chat_id,))
             c.execute("UPDATE users SET match_played = match_played + 1 WHERE chat_id = %s", (chat_id,))
@@ -127,7 +126,6 @@ def button(update: Update, context: CallbackContext) -> None:
             query.edit_message_text(text="Insufficient Funds.")
     elif query.data == 'play_20':
         if user and user[0] + user[1] >= 20:
-            # Logic for playing a match with ₹20 entry
             query.edit_message_text(text="You have joined the match with ₹20 entry fee.")
             c.execute("UPDATE users SET deposit_funds = deposit_funds - 20 WHERE chat_id = %s", (chat_id,))
             c.execute("UPDATE users SET match_played = match_played + 1 WHERE chat_id = %s", (chat_id,))
@@ -160,8 +158,7 @@ def webhook_handler():
     return "ok"
 
 # Initialize the dispatcher
-updater = Updater(bot=bot, use_context=True)
-dispatcher = updater.dispatcher
+dispatcher = Dispatcher(bot, None, workers=0, use_context=True)
 
 # Add command handlers to dispatcher
 dispatcher.add_handler(CommandHandler("start", start))
