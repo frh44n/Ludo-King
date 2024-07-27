@@ -15,19 +15,23 @@ def get_db_connection():
     return psycopg2.connect(DATABASE_URL, sslmode='require')
 
 def create_table():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            user_id BIGINT PRIMARY KEY,
-            available_balance NUMERIC DEFAULT 0,
-            deposit_balance NUMERIC DEFAULT 0,
-            withdrawal_balance NUMERIC DEFAULT 0
-        )
-    """)
-    conn.commit()
-    cur.close()
-    conn.close()
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                user_id BIGINT PRIMARY KEY,
+                available_balance NUMERIC DEFAULT 0,
+                deposit_balance NUMERIC DEFAULT 0,
+                withdrawal_balance NUMERIC DEFAULT 0
+            )
+        """)
+        conn.commit()
+        cur.close()
+        conn.close()
+        logger.info("Table created successfully.")
+    except Exception as e:
+        logger.error(f"Error creating table: {e}")
 
 # Bot token and webhook URL
 TOKEN = '7256179302:AAEKIqy4U--JL6pypx47YsNhuTVRrNO2j4k'
