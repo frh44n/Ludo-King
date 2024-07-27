@@ -1,5 +1,5 @@
 from flask import Flask, request
-from telegram import Update
+from telegram import Bot, Update
 from telegram.ext import CommandHandler, Dispatcher
 from telegram.ext import CallbackContext
 import psycopg2
