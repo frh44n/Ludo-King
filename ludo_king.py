@@ -195,14 +195,34 @@ def confirm_action(update: Update, context: CallbackContext):
         data = query.data
 
         if data.startswith('play_'):
-            entry_amount = 10 if data == 'play_entry_10' else 20
+            entry_amount = 10 if data == 'play_entry_10' else 20 if data == 'play_entry_20' else None
+            
+            if entry_amount is None:
+                query.edit_message_text("Invalid action.")
+                return
+
             conn = get_db_connection()
             cur = conn.cursor()
-            cur.execute("UPDATE users SET available_balance = available_balance - %s WHERE user_id = %s", (entry_amount, user_id))
-            conn.commit()
+            
+            # Fetch the current available balance
+            cur.execute("SELECT available_balance FROM users WHERE user_id = %s", (user_id,))
+            result = cur.fetchone()
+
+            if result:
+                available_balance = result[0]
+
+                if available_balance >= entry_amount:
+                    # Deduct the entry amount from the available balance
+                    cur.execute("UPDATE users SET available_balance = available_balance - %s WHERE user_id = %s", (entry_amount, user_id))
+                    conn.commit()
+                    query.edit_message_text(f"Match started! ₹{entry_amount} has been deducted from your balance.")
+                else:
+                    query.edit_message_text("Insufficient Balance. Please /Add_Balance.")
+            else:
+                query.edit_message_text("User not found.")
+
             cur.close()
             conn.close()
-            query.edit_message_text(f"Match started! ₹{entry_amount} has been deducted from your balance.")
         elif data == 'cancel':
             query.edit_message_text("Action cancelled.")
     except Exception as e:
@@ -228,5 +248,3 @@ def main():
     logger.info(f"Webhook set to {WEBHOOK_URL}")
 
 if __name__ == '__main__':
-    main()
-    app.run(host='0.0.0.0', port=5000)
