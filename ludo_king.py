@@ -1,54 +1,57 @@
 import logging
+import psycopg2
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, MessageHandler, Filters, CallbackContext
-from sqlalchemy import create_engine, Column, BigInteger, Numeric, String
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# SQLAlchemy setup
-DATABASE_URL = 'postgres://default:gaFjrs9b4oLK@ep-ancient-smoke-a1pliqaw.ap-southeast-1.aws.neon.tech:5432/verceldb?sslmode=require'
-Base = declarative_base()
-engine = create_engine(DATABASE_URL)
-Session = sessionmaker(bind=engine)
-session = Session()
+# Database connection setup
+DATABASE_URL = "postgres://default:gaFjrs9b4oLK@ep-ancient-smoke-a1pliqaw.ap-southeast-1.aws.neon.tech:5432/verceldb?sslmode=require"
 
-class User(Base):
-    __tablename__ = 'users'
-    user_id = Column(BigInteger, primary_key=True)
-    available_balance = Column(Numeric, default=0)
-    deposit_balance = Column(Numeric, default=0)
-    withdrawal_balance = Column(Numeric, default=0)
-
-Base.metadata.create_all(engine)
+def get_db_connection():
+    return psycopg2.connect(DATABASE_URL, sslmode='require')
 
 # Bot token
 TOKEN = '7256179302:AAEKIqy4U--JL6pypx47YsNhuTVRrNO2j4k'
 
 def start(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
-    if not session.query(User).filter_by(user_id=user_id).first():
-        new_user = User(user_id=user_id)
-        session.add(new_user)
-        session.commit()
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM users WHERE user_id = %s", (user_id,))
+    user = cur.fetchone()
+    
+    if not user:
+        cur.execute("INSERT INTO users (user_id) VALUES (%s)", (user_id,))
+        conn.commit()
         update.message.reply_text("Welcome! Your account has been created.")
     else:
         update.message.reply_text("Welcome back!")
+    
+    cur.close()
+    conn.close()
 
 def account_balance(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
-    user = session.query(User).filter_by(user_id=user_id).first()
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT available_balance, deposit_balance, withdrawal_balance FROM users WHERE user_id = %s", (user_id,))
+    user = cur.fetchone()
+    
     if user:
+        available_balance, deposit_balance, withdrawal_balance = user
         update.message.reply_text(
-            f"Available Balance: {user.available_balance}\n"
-            f"Deposit Balance: {user.deposit_balance}\n"
-            f"Withdrawal Balance: {user.withdrawal_balance}"
+            f"Available Balance: {available_balance}\n"
+            f"Deposit Balance: {deposit_balance}\n"
+            f"Withdrawal Balance: {withdrawal_balance}"
         )
     else:
         update.message.reply_text("You don't have an account yet. Send /start to create one.")
+    
+    cur.close()
+    conn.close()
 
 def add_balance(update: Update, context: CallbackContext):
     update.message.reply_text(
