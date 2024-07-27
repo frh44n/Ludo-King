@@ -5,7 +5,7 @@ from telegram import Bot, Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Dispatcher, CommandHandler, CallbackQueryHandler, MessageHandler, Filters, CallbackContext
 import test
 import withdraw
-import keyboard
+
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
