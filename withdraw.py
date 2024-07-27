@@ -1,7 +1,7 @@
 from telegram import Update
 from telegram.ext import CommandHandler, MessageHandler, Filters, CallbackContext
 import logging
-from ludo_king import get_db_connection, GROUP_CHAT_ID
+from ludo_king import GROUP_CHAT_ID
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -15,26 +15,10 @@ def withdraw_command(update: Update, context: CallbackContext):
 def handle_withdraw_amount(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
     if context.user_data.get('withdraw_state') == 'waiting_for_amount' and context.user_data['withdraw_user_id'] == user_id:
-        try:
-            amount = float(update.message.text)
-            context.user_data['withdraw_amount'] = amount
-            
-            conn = get_db_connection()
-            cur = conn.cursor()
-            cur.execute("SELECT available_balance FROM users WHERE user_id = %s", (user_id,))
-            user = cur.fetchone()
-
-            if user and user[0] >= amount:
-                context.user_data['withdraw_state'] = 'waiting_for_upi'
-                update.message.reply_text("Enter your UPI ID:")
-            else:
-                update.message.reply_text("Insufficient Balance. Add Balance by pressing this button 🔘 /Add_Balance")
-                context.user_data['withdraw_state'] = None
-            cur.close()
-            conn.close()
-        except ValueError:
-            update.message.reply_text("Please enter a valid amount.")
-            context.user_data['withdraw_state'] = 'waiting_for_amount'
+        amount = update.message.text
+        context.user_data['withdraw_amount'] = amount
+        context.user_data['withdraw_state'] = 'waiting_for_upi'
+        update.message.reply_text("Enter your UPI ID:")
 
 def handle_withdraw_upi(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
