@@ -248,3 +248,5 @@ def main():
     logger.info(f"Webhook set to {WEBHOOK_URL}")
 
 if __name__ == '__main__':
+    main()
+    app.run(host='0.0.0.0', port=5000)
