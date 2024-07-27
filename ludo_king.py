@@ -4,6 +4,7 @@ from flask import Flask, request
 from telegram import Bot, Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Dispatcher, CommandHandler, CallbackQueryHandler, MessageHandler, Filters, CallbackContext
 import test
+import withdraw
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -245,7 +246,7 @@ def main():
 
     # Register new handlers for the additional functionality
     test.register_new_handlers(dispatcher)
-    
+    withdraw.register_withdraw_handlers(dispatcher)
 
     bot.set_webhook(WEBHOOK_URL)
     logger.info(f"Webhook set to {WEBHOOK_URL}")
