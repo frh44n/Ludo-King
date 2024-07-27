@@ -54,7 +54,7 @@ def webhook():
         logger.error(f"Error in webhook: {e}")
         return 'error'
 
-def start(update, context):
+def start(update: Update, context: CallbackContext):
     try:
         user_id = update.message.from_user.id
         conn = get_db_connection()
@@ -75,7 +75,7 @@ def start(update, context):
         logger.error(f"Error in start command: {e}")
         update.message.reply_text("An error occurred while processing your request.")
 
-def account_balance(update, context):
+def account_balance(update: Update, context: CallbackContext):
     try:
         user_id = update.message.from_user.id
         conn = get_db_connection()
@@ -99,7 +99,7 @@ def account_balance(update, context):
         logger.error(f"Error in account_balance command: {e}")
         update.message.reply_text("An error occurred while processing your request.")
 
-def add_balance(update, context):
+def add_balance(update: Update, context: CallbackContext):
     try:
         update.message.reply_text(
             "Pay minimum ₹10 on UPI [9931071170@fam].",
@@ -111,7 +111,7 @@ def add_balance(update, context):
         logger.error(f"Error in add_balance command: {e}")
         update.message.reply_text("An error occurred while processing your request.")
 
-def handle_paid(update, context):
+def handle_paid(update: Update, context: CallbackContext):
     try:
         query = update.callback_query
         query.answer()
@@ -121,7 +121,7 @@ def handle_paid(update, context):
         logger.error(f"Error in handle_paid callback: {e}")
         query.message.reply_text("An error occurred while processing your request.")
 
-def handle_message(update, context):
+def handle_message(update: Update, context: CallbackContext):
     try:
         if context.user_data.get('waiting_for_utr'):
             user_id = update.message.from_user.id
@@ -133,6 +133,77 @@ def handle_message(update, context):
         logger.error(f"Error in handle_message: {e}")
         update.message.reply_text("An error occurred while processing your request.")
 
+def play(update: Update, context: CallbackContext):
+    try:
+        keyboard = [
+            [InlineKeyboardButton("₹10 Entry, Winner- ₹20", callback_data='entry_10')],
+            [InlineKeyboardButton("₹20 Entry, Winner- ₹40", callback_data='entry_20')]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        update.message.reply_text("Choose your entry:", reply_markup=reply_markup)
+    except Exception as e:
+        logger.error(f"Error in play command: {e}")
+        update.message.reply_text("An error occurred while processing your request.")
+
+def handle_entry_selection(update: Update, context: CallbackContext):
+    try:
+        query = update.callback_query
+        query.answer()
+        user_id = query.from_user.id
+        data = query.data
+
+        entry_amount = 10 if data == 'entry_10' else 20 if data == 'entry_20' else None
+        
+        if entry_amount is None:
+            query.edit_message_text(text="Invalid selection.")
+            return
+        
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT available_balance FROM users WHERE user_id = %s", (user_id,))
+        result = cur.fetchone()
+
+        if result:
+            available_balance = result[0]
+
+            if available_balance < entry_amount:
+                query.edit_message_text(text="Insufficient Balance. Please /Add_Balance.")
+            else:
+                keyboard = [
+                    [InlineKeyboardButton("Play Match", callback_data=f'play_{data}')],
+                    [InlineKeyboardButton("Cancel ❌", callback_data='cancel')]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                query.edit_message_text(text="Confirm your choice:", reply_markup=reply_markup)
+
+        cur.close()
+        conn.close()
+    except Exception as e:
+        logger.error(f"Error in handle_entry_selection: {e}")
+        query.edit_message_text(text="An error occurred while processing your request.")
+
+def confirm_action(update: Update, context: CallbackContext):
+    try:
+        query = update.callback_query
+        query.answer()
+        user_id = query.from_user.id
+        data = query.data
+
+        if data.startswith('play_'):
+            entry_amount = 10 if data == 'play_entry_10' else 20
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute("UPDATE users SET available_balance = available_balance - %s WHERE user_id = %s", (entry_amount, user_id))
+            conn.commit()
+            cur.close()
+            conn.close()
+            query.edit_message_text(f"Match started! ₹{entry_amount} has been deducted from your balance.")
+        elif data == 'cancel':
+            query.edit_message_text("Action cancelled.")
+    except Exception as e:
+        logger.error(f"Error in confirm_action: {e}")
+        query.edit_message_text("An error occurred while processing your request.")
+
 def main():
     create_table()
     
@@ -142,7 +213,10 @@ def main():
     dispatcher.add_handler(CommandHandler("start", start))
     dispatcher.add_handler(CommandHandler("Account_Balance", account_balance))
     dispatcher.add_handler(CommandHandler("Add_Balance", add_balance))
+    dispatcher.add_handler(CommandHandler("Play", play))
     dispatcher.add_handler(CallbackQueryHandler(handle_paid, pattern='paid'))
+    dispatcher.add_handler(CallbackQueryHandler(handle_entry_selection, pattern='entry_'))
+    dispatcher.add_handler(CallbackQueryHandler(confirm_action, pattern='play_|cancel'))
     dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
 
     bot.set_webhook(WEBHOOK_URL)
