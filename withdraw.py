@@ -17,13 +17,14 @@ def handle_withdraw_amount(update: Update, context: CallbackContext):
     if context.user_data.get('withdraw_state') == 'waiting_for_amount' and context.user_data['withdraw_user_id'] == user_id:
         try:
             amount = float(update.message.text)
+            context.user_data['withdraw_amount'] = amount
+            
             conn = get_db_connection()
             cur = conn.cursor()
             cur.execute("SELECT available_balance FROM users WHERE user_id = %s", (user_id,))
             user = cur.fetchone()
 
             if user and user[0] >= amount:
-                context.user_data['withdraw_amount'] = amount
                 context.user_data['withdraw_state'] = 'waiting_for_upi'
                 update.message.reply_text("Enter your UPI ID:")
             else:
