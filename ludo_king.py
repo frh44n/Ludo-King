@@ -1,73 +1,89 @@
-from flask import Flask, request
-from telegram import Bot, Update
-from telegram.ext import CommandHandler, Dispatcher
-from telegram.ext import CallbackContext
-import psycopg2
-import os
 import logging
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, MessageHandler, Filters, CallbackContext
+from sqlalchemy import create_engine, Column, BigInteger, Numeric, String
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
-# Initialize Flask app
-app = Flask(__name__)
-
-# Initialize Telegram bot
-TOKEN = '7256179302:AAEKIqy4U--JL6pypx47YsNhuTVRrNO2j4k'
-bot = Bot(token=TOKEN)
-
-# Replace with your PostgreSQL connection details
-DATABASE_URL = 'postgres://default:gaFjrs9b4oLK@ep-ancient-smoke-a1pliqaw.ap-southeast-1.aws.neon.tech:5432/verceldb?sslmode=require'
-ADMIN_ID = 6826870863  # Replace with the admin's Telegram user ID
-
-# Set up logging
+# Configure logging
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-def get_db_connection():
-    conn = psycopg2.connect(DATABASE_URL)
-    return conn
+# SQLAlchemy setup
+DATABASE_URL = 'postgres://default:gaFjrs9b4oLK@ep-ancient-smoke-a1pliqaw.ap-southeast-1.aws.neon.tech:5432/verceldb?sslmode=require'
+Base = declarative_base()
+engine = create_engine(DATABASE_URL)
+Session = sessionmaker(bind=engine)
+session = Session()
 
-def total_user(update: Update, context: CallbackContext):
-    if update.effective_user.id != ADMIN_ID:
-        context.bot.send_message(chat_id=update.effective_chat.id, text="You are not authorized to use this command.")
-        return
+class User(Base):
+    __tablename__ = 'users'
+    user_id = Column(BigInteger, primary_key=True)
+    available_balance = Column(Numeric, default=0)
+    deposit_balance = Column(Numeric, default=0)
+    withdrawal_balance = Column(Numeric, default=0)
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
+Base.metadata.create_all(engine)
 
-    try:
-        cursor.execute("SELECT chat_id FROM users")  # Replace 'users' with your table name
-        chat_ids = cursor.fetchall()
-        if chat_ids:
-            chat_ids_text = "\n".join(str(chat_id[0]) for chat_id in chat_ids)
-            context.bot.send_message(chat_id=update.effective_chat.id, text=f"User Chat IDs:\n{chat_ids_text}")
-        else:
-            context.bot.send_message(chat_id=update.effective_chat.id, text="No users found.")
-    except Exception as e:
-        logging.error(f"Error processing /Total_user command: {e}")
-        context.bot.send_message(chat_id=update.effective_chat.id, text=f"An error occurred: {e}")
-    finally:
-        cursor.close()
-        conn.close()
+# Bot token
+TOKEN = '7256179302:AAEKIqy4U--JL6pypx47YsNhuTVRrNO2j4k'
 
-@app.route('/webhook', methods=['POST'])
-def webhook():
-    update = request.get_json()
-    if 'message' in update and update['message']['text'].startswith('/'):
-        dispatcher.process_update(Update.de_json(update, bot))
-    return 'ok'
+def start(update: Update, context: CallbackContext):
+    user_id = update.message.from_user.id
+    if not session.query(User).filter_by(user_id=user_id).first():
+        new_user = User(user_id=user_id)
+        session.add(new_user)
+        session.commit()
+        update.message.reply_text("Welcome! Your account has been created.")
+    else:
+        update.message.reply_text("Welcome back!")
 
-def set_webhook():
-    webhook_url = 'https://ludo-king.onrender.com/7256179302:AAEKIqy4U--JL6pypx47YsNhuTVRrNO2j4k'  # This should be your public URL
-    bot.set_webhook(url=webhook_url + '/webhook')
+def account_balance(update: Update, context: CallbackContext):
+    user_id = update.message.from_user.id
+    user = session.query(User).filter_by(user_id=user_id).first()
+    if user:
+        update.message.reply_text(
+            f"Available Balance: {user.available_balance}\n"
+            f"Deposit Balance: {user.deposit_balance}\n"
+            f"Withdrawal Balance: {user.withdrawal_balance}"
+        )
+    else:
+        update.message.reply_text("You don't have an account yet. Send /start to create one.")
+
+def add_balance(update: Update, context: CallbackContext):
+    update.message.reply_text(
+        "Pay minimum ₹10 on UPI [9931071170@fam].",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("PAID", callback_data='paid')]
+        ])
+    )
+
+def handle_paid(update: Update, context: CallbackContext):
+    query = update.callback_query
+    query.answer()
+    query.message.reply_text("Enter 12-digit UTR.")
+    context.user_data['waiting_for_utr'] = True
+
+def handle_message(update: Update, context: CallbackContext):
+    if context.user_data.get('waiting_for_utr'):
+        user_id = update.message.from_user.id
+        utr = update.message.text
+        context.bot.send_message(chat_id='1002156476121', text=f"user_id: {user_id}, UTR: {utr}")
+        update.message.reply_text("Your UTR has been forwarded.")
+        context.user_data['waiting_for_utr'] = False
 
 def main():
-    global dispatcher
-    dispatcher = Dispatcher(bot, None)
-    dispatcher.add_handler(CommandHandler('Total_user', total_user))
+    updater = Updater(TOKEN, use_context=True)
+    dp = updater.dispatcher
 
-    # Set webhook URL
-    set_webhook()
+    dp.add_handler(CommandHandler("start", start))
+    dp.add_handler(CommandHandler("Account_Balance", account_balance))
+    dp.add_handler(CommandHandler("Add_Balance", add_balance))
+    dp.add_handler(CallbackQueryHandler(handle_paid, pattern='paid'))
+    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
 
-    # Run the Flask app
-    app.run(host='0.0.0.0', port=5000)
+    updater.start_polling()
+    updater.idle()
 
 if __name__ == '__main__':
     main()
