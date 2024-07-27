@@ -8,8 +8,8 @@
   ],
   "routes": [
     {
-      "src": "/",
-      "dest": "ludo_king.py"
+      "src": "/(.*)",
+      "dest": "/ludo_king.py"
     }
   ]
 }
