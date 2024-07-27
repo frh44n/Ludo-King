@@ -136,7 +136,8 @@ def add_balance(update: Update, context: CallbackContext):
     except Exception as e:
         logger.error(f"Error in add_balance command: {e}")
         update.message.reply_text("An error occurred while processing your request.")
-        def play(update: Update, context: CallbackContext):
+
+def play(update: Update, context: CallbackContext):
     try:
         user_id = update.message.from_user.id
         conn = get_db_connection()
@@ -242,6 +243,7 @@ def main():
 
     bot.set_webhook(WEBHOOK_URL)
     logger.info(f"Webhook set to {WEBHOOK_URL}")
+
 
 if __name__ == '__main__':
     main()
