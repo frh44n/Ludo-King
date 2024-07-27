@@ -1,7 +1,8 @@
 import logging
 import psycopg2
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, MessageHandler, Filters, CallbackContext
+from flask import Flask, request
+from telegram import Bot, Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Dispatcher, CommandHandler, CallbackQueryHandler, MessageHandler, Filters, CallbackContext
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -13,10 +14,22 @@ DATABASE_URL = "postgres://default:gaFjrs9b4oLK@ep-ancient-smoke-a1pliqaw.ap-sou
 def get_db_connection():
     return psycopg2.connect(DATABASE_URL, sslmode='require')
 
-# Bot token
+# Bot token and webhook URL
 TOKEN = '7256179302:AAEKIqy4U--JL6pypx47YsNhuTVRrNO2j4k'
+WEBHOOK_URL = 'https://ludo-king.onrender.com/7256179302:AAEKIqy4U--JL6pypx47YsNhuTVRrNO2j4k'
+GROUP_CHAT_ID = '1002156476121'
 
-def start(update: Update, context: CallbackContext):
+bot = Bot(TOKEN)
+
+app = Flask(__name__)
+
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    update = Update.de_json(request.get_json(), bot)
+    dispatcher.process_update(update)
+    return 'ok'
+
+def start(update, context):
     user_id = update.message.from_user.id
     conn = get_db_connection()
     cur = conn.cursor()
@@ -33,7 +46,7 @@ def start(update: Update, context: CallbackContext):
     cur.close()
     conn.close()
 
-def account_balance(update: Update, context: CallbackContext):
+def account_balance(update, context):
     user_id = update.message.from_user.id
     conn = get_db_connection()
     cur = conn.cursor()
@@ -53,7 +66,7 @@ def account_balance(update: Update, context: CallbackContext):
     cur.close()
     conn.close()
 
-def add_balance(update: Update, context: CallbackContext):
+def add_balance(update, context):
     update.message.reply_text(
         "Pay minimum ₹10 on UPI [9931071170@fam].",
         reply_markup=InlineKeyboardMarkup([
@@ -61,32 +74,32 @@ def add_balance(update: Update, context: CallbackContext):
         ])
     )
 
-def handle_paid(update: Update, context: CallbackContext):
+def handle_paid(update, context):
     query = update.callback_query
     query.answer()
     query.message.reply_text("Enter 12-digit UTR.")
     context.user_data['waiting_for_utr'] = True
 
-def handle_message(update: Update, context: CallbackContext):
+def handle_message(update, context):
     if context.user_data.get('waiting_for_utr'):
         user_id = update.message.from_user.id
         utr = update.message.text
-        context.bot.send_message(chat_id='1002156476121', text=f"user_id: {user_id}, UTR: {utr}")
+        context.bot.send_message(chat_id=GROUP_CHAT_ID, text=f"user_id: {user_id}, UTR: {utr}")
         update.message.reply_text("Your UTR has been forwarded.")
         context.user_data['waiting_for_utr'] = False
 
 def main():
-    updater = Updater(TOKEN, use_context=True)
-    dp = updater.dispatcher
+    global dispatcher
+    dispatcher = Dispatcher(bot, None, use_context=True)
 
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CommandHandler("Account_Balance", account_balance))
-    dp.add_handler(CommandHandler("Add_Balance", add_balance))
-    dp.add_handler(CallbackQueryHandler(handle_paid, pattern='paid'))
-    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
+    dispatcher.add_handler(CommandHandler("start", start))
+    dispatcher.add_handler(CommandHandler("Account_Balance", account_balance))
+    dispatcher.add_handler(CommandHandler("Add_Balance", add_balance))
+    dispatcher.add_handler(CallbackQueryHandler(handle_paid, pattern='paid'))
+    dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
 
-    updater.start_polling()
-    updater.idle()
+    bot.set_webhook(WEBHOOK_URL)
 
 if __name__ == '__main__':
     main()
+    app.run(host='0.0.0.0', port=5000)
