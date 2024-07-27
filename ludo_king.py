@@ -3,7 +3,7 @@ import psycopg2
 import logging
 from telegram import Update, Bot
 from telegram.ext import Updater, CommandHandler, CallbackContext
-from flask import Flask, request
+from flask import Flask
 
 # Set up logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -40,20 +40,6 @@ def start(update: Update, context: CallbackContext) -> None:
     else:
         update.message.reply_text("Welcome! Start Playing Matches.")
 
-# Function to set webhook
-@app.route('/set_webhook', methods=['GET', 'POST'])
-def set_webhook():
-    webhook_url = f"https://{os.getenv('VERCEL_URL')}/{BOT_TOKEN}"
-    bot.set_webhook(url=webhook_url)
-    return "Webhook set successfully"
-
-# Function to handle webhook
-@app.route(f'/{BOT_TOKEN}', methods=['POST'])
-def webhook_handler():
-    update = Update.de_json(request.get_json(), bot)
-    dispatcher.process_update(update)
-    return "ok"
-
 # Initialize the dispatcher
 updater = Updater(token=BOT_TOKEN, use_context=True)
 dispatcher = updater.dispatcher
@@ -61,6 +47,11 @@ dispatcher = updater.dispatcher
 # Add command handler to dispatcher
 dispatcher.add_handler(CommandHandler("start", start))
 
+# Start polling
+def run_bot():
+    updater.start_polling()
+    updater.idle()
+
 # Vercel requires an `app` object to be exposed
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    run_bot()
