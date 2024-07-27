@@ -42,7 +42,7 @@ def start(update: Update, context: CallbackContext) -> None:
 # Function to set webhook
 @app.route('/set_webhook', methods=['GET', 'POST'])
 def set_webhook():
-    webhook_url = f"https://ludo-king.onrender.com/{BOT_TOKEN}"
+    webhook_url = f"https://{Vercel_Deployment_URL}/{BOT_TOKEN}"
     bot.set_webhook(url=webhook_url)
     return "Webhook set successfully"
 
@@ -60,6 +60,6 @@ dispatcher = updater.dispatcher
 # Add command handler to dispatcher
 dispatcher.add_handler(CommandHandler("start", start))
 
-# Start the Flask app
+# Vercel requires an `app` object to be exposed
 if __name__ == "__main__":
-    app.run(port=5000)
+    app.run()
