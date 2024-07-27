@@ -86,9 +86,8 @@ def account_balance(update: Update, context: CallbackContext):
         if user:
             available_balance, deposit_balance, withdrawal_balance = user
             update.message.reply_text(
-                f"Available Balance: {available_balance}\n"
-                f"Deposit Balance: {deposit_balance}\n"
-                f"Withdrawal Balance: {withdrawal_balance}"
+                f"Available Balance: {available_balance}"
+                
             )
         else:
             update.message.reply_text("You don't have an account yet. Send /start to create one.")
@@ -128,7 +127,7 @@ def handle_message(update: Update, context: CallbackContext):
         if context.user_data.get('waiting_for_utr'):
             utr = update.message.text
             context.bot.send_message(chat_id=GROUP_CHAT_ID, text=f"user_id: {user_id}, UTR: {utr}")
-            update.message.reply_text("Your UTR has been forwarded.")
+            update.message.reply_text("After verification money will be added in your Accoun. Please check after few minutes. Press /Account_Balance to check balance.")
             context.user_data['waiting_for_utr'] = False
 
         elif context.user_data.get('waiting_for_ludo_id'):
@@ -150,7 +149,7 @@ def handle_message(update: Update, context: CallbackContext):
             conn.close()
 
             # Notify the user
-            update.message.reply_text(f"Match started! ₹{entry_amount} has been deducted from your balance.")
+            update.message.reply_text(f"Room Code will be available to you when all members will join!\n₹{entry_amount} has been deducted from your balance.")
             context.user_data['waiting_for_ludo_id'] = False
 
         else:
