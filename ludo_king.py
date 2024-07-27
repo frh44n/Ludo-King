@@ -94,13 +94,46 @@ def add_fund(update: Update, context: CallbackContext) -> None:
         reply_markup=reply_markup
     )
 
+# Command to play match
+def play_match(update: Update, context: CallbackContext) -> None:
+    chat_id = update.message.chat_id
+    keyboard = [
+        [InlineKeyboardButton("₹10 Entry, Win- ₹20", callback_data='play_10')],
+        [InlineKeyboardButton("₹20 Entry, Win- ₹40", callback_data='play_20')]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    update.message.reply_text("Choose your entry amount:", reply_markup=reply_markup)
+
 # Handler for inline keyboard button press
 def button(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
     query.answer()
+
+    chat_id = query.message.chat.id
+    c.execute("SELECT deposit_funds, withdrawal_funds FROM users WHERE chat_id = %s", (chat_id,))
+    user = c.fetchone()
+
     if query.data == 'amount_paid':
         query.edit_message_text(text="Enter 12 digit UTR.")
         context.user_data['awaiting_utr'] = True
+    elif query.data == 'play_10':
+        if user and user[0] + user[1] >= 10:
+            # Logic for playing a match with ₹10 entry
+            query.edit_message_text(text="You have joined the match with ₹10 entry fee.")
+            c.execute("UPDATE users SET deposit_funds = deposit_funds - 10 WHERE chat_id = %s", (chat_id,))
+            c.execute("UPDATE users SET match_played = match_played + 1 WHERE chat_id = %s", (chat_id,))
+            conn.commit()
+        else:
+            query.edit_message_text(text="Insufficient Funds.")
+    elif query.data == 'play_20':
+        if user and user[0] + user[1] >= 20:
+            # Logic for playing a match with ₹20 entry
+            query.edit_message_text(text="You have joined the match with ₹20 entry fee.")
+            c.execute("UPDATE users SET deposit_funds = deposit_funds - 20 WHERE chat_id = %s", (chat_id,))
+            c.execute("UPDATE users SET match_played = match_played + 1 WHERE chat_id = %s", (chat_id,))
+            conn.commit()
+        else:
+            query.edit_message_text(text="Insufficient Funds.")
 
 # Handler for user messages
 def handle_message(update: Update, context: CallbackContext) -> None:
@@ -132,9 +165,10 @@ dispatcher = updater.dispatcher
 
 # Add command handlers to dispatcher
 dispatcher.add_handler(CommandHandler("start", start))
-dispatcher.add_handler(CommandHandler("Funds Info", funds_info))
-dispatcher.add_handler(CommandHandler("Match Info", match_info))
-dispatcher.add_handler(CommandHandler("Add Fund", add_fund))
+dispatcher.add_handler(CommandHandler("fundsinfo", funds_info))
+dispatcher.add_handler(CommandHandler("matchinfo", match_info))
+dispatcher.add_handler(CommandHandler("addfund", add_fund))
+dispatcher.add_handler(CommandHandler("playmatch", play_match))
 dispatcher.add_handler(CallbackQueryHandler(button))
 dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
 
