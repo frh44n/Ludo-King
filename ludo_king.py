@@ -36,7 +36,7 @@ def create_table():
 # Bot token and webhook URL
 TOKEN = '7256179302:AAEKIqy4U--JL6pypx47YsNhuTVRrNO2j4k'
 WEBHOOK_URL = 'https://ludo-king.onrender.com/7256179302:AAEKIqy4U--JL6pypx47YsNhuTVRrNO2j4k'
-GROUP_CHAT_ID = '1002156476121'
+GROUP_CHAT_ID = '7090230279'
 
 bot = Bot(TOKEN)
 
