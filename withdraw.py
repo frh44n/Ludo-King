@@ -3,11 +3,14 @@ from telegram.ext import CommandHandler, MessageHandler, Filters, CallbackContex
 import logging
 from ludo_king import get_db_connection, GROUP_CHAT_ID
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 def withdraw_command(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
-    update.message.reply_text("Enter Amount:")
     context.user_data['withdraw_state'] = 'waiting_for_amount'
     context.user_data['withdraw_user_id'] = user_id
+    update.message.reply_text("Enter Amount:")
 
 def handle_withdraw_amount(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
@@ -21,8 +24,8 @@ def handle_withdraw_amount(update: Update, context: CallbackContext):
 
             if user and user[0] >= amount:
                 context.user_data['withdraw_amount'] = amount
-                update.message.reply_text("Enter your UPI ID:")
                 context.user_data['withdraw_state'] = 'waiting_for_upi'
+                update.message.reply_text("Enter your UPI ID:")
             else:
                 update.message.reply_text("Insufficient Balance. Add Balance by pressing this button 🔘 /Add_Balance")
                 context.user_data['withdraw_state'] = None
