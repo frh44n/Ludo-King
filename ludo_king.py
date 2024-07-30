@@ -5,7 +5,7 @@ from telegram import Bot, Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Dispatcher, CommandHandler, CallbackQueryHandler, MessageHandler, Filters, CallbackContext
 import test
 import withdraw
-import inline
+
 
 
 # Configure logging
@@ -75,6 +75,14 @@ def start(update: Update, context: CallbackContext):
         
         cur.close()
         conn.close()
+        keyboard = [
+            [InlineKeyboardButton("Play Match", callback_data='play')],
+            [InlineKeyboardButton("Check Balance", callback_data='check_balance')],
+            [InlineKeyboardButton("Add Balance", callback_data='add_balance')],
+            [InlineKeyboardButton("Withdraw your money", callback_data='withdraw')]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        update.message.reply_text("Choose an option:", reply_markup=reply_markup)
     except Exception as e:
         logger.error(f"Error in start command: {e}")
         update.message.reply_text("An error occurred while processing your request.")
@@ -249,7 +257,7 @@ def main():
     # Register new handlers for the additional functionality
     test.register_new_handlers(dispatcher)
     withdraw.register_withdraw_handlers(dispatcher)
-    inline.register_inline_handlers(dispatcher)
+    
     
 
     bot.set_webhook(WEBHOOK_URL)
