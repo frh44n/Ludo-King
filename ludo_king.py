@@ -5,6 +5,7 @@ from telegram import Bot, Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Dispatcher, CommandHandler, CallbackQueryHandler, MessageHandler, Filters, CallbackContext
 import test
 import withdraw
+import inline
 
 
 # Configure logging
@@ -248,6 +249,7 @@ def main():
     # Register new handlers for the additional functionality
     test.register_new_handlers(dispatcher)
     withdraw.register_withdraw_handlers(dispatcher)
+    inline.register_inline_handlers(dispatcher)
     
 
     bot.set_webhook(WEBHOOK_URL)
