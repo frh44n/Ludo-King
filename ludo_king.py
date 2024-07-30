@@ -75,14 +75,7 @@ def start(update: Update, context: CallbackContext):
         
         cur.close()
         conn.close()
-        keyboard = [
-            [InlineKeyboardButton("Play Match", callback_data='play')],
-            [InlineKeyboardButton("Check Balance", callback_data='check_balance')],
-            [InlineKeyboardButton("Add Balance", callback_data='add_balance')],
-            [InlineKeyboardButton("Withdraw your money", callback_data='withdraw')]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        update.message.reply_text("Choose an option:", reply_markup=reply_markup)
+        
     except Exception as e:
         logger.error(f"Error in start command: {e}")
         update.message.reply_text("An error occurred while processing your request.")
